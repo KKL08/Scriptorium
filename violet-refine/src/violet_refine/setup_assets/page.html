@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Violet-Refine · 受理书</title>
+<style>
+  /* OFL 开源字体子集，随包分发（见 fonts/OFL-NOTICE.txt）；缺字字形按 font 栈逐字回退 */
+  @font-face { font-family: 'Ma Shan Zheng'; src: url('/assets/fonts/ma-shan-zheng.sub.woff2') format('woff2');
+               font-weight: 400; font-display: swap; }
+  @font-face { font-family: 'Courier Prime'; src: url('/assets/fonts/courier-prime.sub.woff2') format('woff2');
+               font-weight: 400; font-display: swap; }
+  @font-face { font-family: 'Cormorant Garamond'; src: url('/assets/fonts/cormorant.sub.woff2') format('woff2');
+               font-weight: 300 700; font-style: normal; font-display: swap; }
+  @font-face { font-family: 'Cormorant Garamond'; src: url('/assets/fonts/cormorant-italic.sub.woff2') format('woff2');
+               font-weight: 300 700; font-style: italic; font-display: swap; }
+  :root {
+    --ink: #27314C;
+    --ink-soft: #5C6478;
+    --accent: #2F4A70;
+    --line-strong: rgba(47,74,112,.42);
+    --paper: #F4EAD2;
+    --warn: #A0444A;
+    --warn-line: rgba(160,68,74,.55);
+    --font-sans: 'Noto Sans SC', 'PingFang SC', system-ui, sans-serif;
+    --font-serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+    --font-brush: 'Ma Shan Zheng', 'Kaiti SC', 'STKaiti', cursive;
+    --font-mono: 'Courier Prime', 'Courier New', Courier, monospace;
+    --font-latin: 'Cormorant Garamond', 'Hoefler Text', Baskerville, Georgia, serif;
+  }
+  body {
+    margin: 0; min-height: 100vh; box-sizing: border-box;
+    padding: 46px 22px 132px; overflow-x: hidden;
+    font-family: var(--font-sans); color: #E8DCC2;
+    background:
+      radial-gradient(115% 95% at 50% 118%, #0D0804 0%, transparent 56%),
+      radial-gradient(78% 56% at 84% -8%, rgba(232,172,100,.3), transparent 62%),
+      linear-gradient(115deg, transparent 32%, rgba(255,224,176,.06) 46%, transparent 58%),
+      repeating-linear-gradient(180deg, transparent 0 178px, rgba(0,0,0,.42) 178px 180px, rgba(255,214,156,.07) 180px 182px),
+      repeating-linear-gradient(179deg, rgba(0,0,0,.10) 0 1px, transparent 1px 4px),
+      repeating-linear-gradient(181deg, rgba(0,0,0,.06) 0 2px, transparent 2px 9px),
+      repeating-linear-gradient(180deg, rgba(255,196,128,.05) 0 16px, rgba(0,0,0,.07) 16px 33px, rgba(255,196,128,.028) 33px 54px, rgba(0,0,0,.05) 54px 76px),
+      #2E2217;
+  }
+  .intro { max-width: 600px; margin: 0 auto 30px; text-align: center; }
+  .smallcaps { font-family: var(--font-latin); font-weight: 600; font-size: 12px;
+               letter-spacing: .32em; text-transform: uppercase; color: #B3A685; }
+  h1 { font-family: var(--font-serif); font-weight: 700; font-size: 26px; margin: 8px 0 10px; color: #F3E6CB; }
+  .intro p { font-size: 14px; line-height: 1.78; color: #CDBE9F; margin: 0; text-wrap: pretty; }
+
+  .composition { display: flex; gap: 24px; justify-content: center; align-items: flex-start;
+                 flex-wrap: wrap; position: relative; z-index: 0; max-width: 860px; margin: 0 auto; }
+
+  /* desk prop: sealed envelope tucked under the letter */
+  .envelope { position: absolute; right: -12px; bottom: -98px; width: 308px; height: 196px; z-index: -1;
+              background: linear-gradient(180deg,#F0E4C8,#E2D2AE); border: 1px solid #CDBA92;
+              border-radius: 3px; transform: rotate(9deg); box-shadow: 0 22px 36px -18px rgba(0,0,0,.6); }
+  .envelope .flap { position: absolute; inset: 0; clip-path: polygon(0 0, 50% 46%, 100% 0);
+                    background: rgba(120,90,40,.10); border-bottom: 1px solid rgba(120,90,40,.2); }
+  .envelope .wax { position: absolute; left: 52%; top: 58%; transform: translate(-50%,-50%);
+                   width: 38px; height: 38px; border-radius: 50%;
+                   background: radial-gradient(circle at 38% 32%, #B5414B, #7E2229 75%);
+                   box-shadow: inset 0 0 0 2px rgba(235,203,128,.25), 0 2px 4px rgba(0,0,0,.35); }
+
+  /* photo print prop */
+  .photo-col { display: flex; flex-direction: column; gap: 12px; align-items: center; margin-top: 14px; }
+  .photo { position: relative; width: 268px; box-sizing: border-box; background: #FBF6E8;
+           padding: 13px 13px 46px; border-radius: 2px;
+           box-shadow: 0 34px 54px -26px rgba(0,0,0,.7), 0 8px 16px -8px rgba(0,0,0,.45);
+           transform: rotate(-1.8deg); transform-origin: center 65%;
+           transition: transform .5s cubic-bezier(.2,.7,.2,1.18), box-shadow .5s ease; }
+  .photo:hover { transform: rotate(0deg) translateY(-16px) scale(1.045);
+                 box-shadow: 0 64px 86px -22px rgba(0,0,0,.85), 0 18px 34px -10px rgba(0,0,0,.62); }
+  .photo-well { width: 100%; height: 358px; overflow: hidden; background: #1A140F; border-radius: 1px; }
+  .photo-well img { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; display: block; }
+  .washi { position: absolute; top: -7px; right: 30px; width: 34px; height: 11px;
+           background: linear-gradient(180deg,#B5414B,#7E2229); transform: rotate(9deg);
+           box-shadow: 0 2px 4px rgba(0,0,0,.35); opacity: .9; border-radius: 1px; }
+  .photo-caption { text-align: center; margin-top: 14px; font-family: var(--font-brush);
+                   font-size: 19px; color: #3A2C1D; line-height: 1; }
+  .photo-under { font-family: var(--font-latin); font-style: italic; font-size: 13px; color: #B3A685; }
+
+  /* the letter (form card) */
+  .letter { position: relative; width: 560px; box-sizing: border-box; background-color: var(--paper);
+            background-image: radial-gradient(120% 85% at 50% 0%, rgba(255,250,236,.55), transparent 55%),
+                              radial-gradient(130% 120% at 50% 116%, rgba(120,90,40,.08), transparent 60%);
+            border: 1px solid #D2BC84; box-shadow: 0 30px 60px -32px rgba(50,35,18,.55);
+            border-radius: 3px; padding: 42px 46px 36px; overflow: hidden; }
+  .frame { position: absolute; inset: 0; pointer-events: none; }
+  .frame .outer { position: absolute; inset: 13px; border: 1px solid #C2A052; border-radius: 2px; }
+  .frame .inner { position: absolute; inset: 17px; border: 1px solid rgba(178,138,60,.34); }
+  .frame .dm { position: absolute; width: 8px; height: 8px; background: #C2A052; transform: rotate(45deg); }
+  .frame .tl { top: 9px; left: 9px; }  .frame .tr { top: 9px; right: 9px; }
+  .frame .bl { bottom: 9px; left: 9px; }  .frame .br { bottom: 9px; right: 9px; }
+
+  /* reveal: opacity flips instantly, only transform transitions (timeline-pause safe) */
+  .reveal { position: relative; opacity: 0; transform: translateY(11px);
+            transition: transform .6s cubic-bezier(.2,.7,.2,1); }
+  .revealed .reveal { opacity: 1; transform: none; }
+  .d0 { transition-delay: 0s; }   .d1 { transition-delay: .06s; }  .d2 { transition-delay: .12s; }
+  .d3 { transition-delay: .18s; } .d4 { transition-delay: .22s; }  .d5 { transition-delay: .28s; }
+  .d6 { transition-delay: .34s; } .d7 { transition-delay: .4s; }   .d8 { transition-delay: .46s; }
+
+  .masthead-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+  .masthead-left { display: flex; align-items: center; gap: 15px; }
+  .masthead-left img { width: 56px; height: auto; flex: none; display: block; }
+  .mast-title { font-family: var(--font-serif); font-weight: 700; font-size: 20px;
+                color: var(--ink); line-height: 1.2; white-space: nowrap; }
+  .mast-sub { font-family: var(--font-latin); font-style: italic; font-weight: 600; font-size: 14px;
+              color: var(--accent); margin-top: 2px; letter-spacing: .02em; }
+  .mast-no { font-family: var(--font-mono); font-size: 11px; color: var(--ink-soft); white-space: nowrap; }
+  .mast-rule { height: 1px; background: #C2A052; opacity: .45; margin-top: 16px; }
+
+  .salutation { font-family: var(--font-brush); font-size: 23px; color: var(--accent); margin: 16px 0 0; }
+
+  blockquote.quote { margin: 12px 0 16px; padding: 2px 0 2px 16px; border-left: 2px solid var(--accent); }
+  .quote .jp { font-family: var(--font-serif); font-size: 13.5px; line-height: 1.85; color: var(--ink-soft); margin: 0 0 8px; }
+  .quote .cn { font-size: 13px; line-height: 1.8; color: var(--ink-soft); margin: 0; }
+
+  .privacy { font-size: 13px; line-height: 1.78; color: var(--ink); margin: 0 0 14px; }
+  .warning { font-family: var(--font-serif); font-style: italic; font-weight: 400; font-size: 12.5px;
+             line-height: 1.65; letter-spacing: .02em; color: var(--warn); margin: 0; }
+
+  .field { margin-top: 24px; }
+  .field + .field { margin-top: 18px; }
+  .field-label { font-family: var(--font-serif); font-weight: 600; font-size: 13.5px;
+                 color: var(--accent); margin-bottom: 2px; }
+  .select-wrap { position: relative; }
+  select { width: 100%; box-sizing: border-box; appearance: none; -webkit-appearance: none;
+           padding: 8px 28px 8px 2px; font-family: var(--font-sans); font-size: 15px; color: var(--ink);
+           background: transparent; border: none; border-bottom: 1.5px solid var(--line-strong);
+           border-radius: 0; cursor: pointer; outline: none; transition: border-color .2s; }
+  select:focus { border-bottom-color: var(--accent); }
+  .chevron { position: absolute; right: 2px; top: 8px; pointer-events: none; color: var(--accent); }
+  .apply-hint { margin: 7px 0 0; font-family: var(--font-mono); font-size: 12px;
+                color: var(--ink-soft); word-break: break-all; }
+  .apply-hint a { color: var(--accent); }
+  .key-wrap { position: relative; }
+  input#api_key { width: 100%; box-sizing: border-box; padding: 8px 30px 8px 2px; font-family: var(--font-mono);
+                  font-size: 14px; color: var(--ink); background: transparent; border: none;
+                  border-bottom: 1.5px solid var(--line-strong); border-radius: 0; outline: none;
+                  letter-spacing: .05em; transition: border-color .2s; }
+  #key-eye { position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+             background: transparent; border: none; padding: 4px; cursor: pointer;
+             color: var(--ink-soft); line-height: 0; }
+  #key-eye:hover { color: var(--accent); }
+  #key-eye svg { display: block; }
+  input#api_key:focus { border-bottom-color: var(--accent); }
+  input#api_key.bad { border-bottom-color: var(--warn-line); }
+
+  .sign-row { margin-top: 28px; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+  .sign-small { font-family: var(--font-serif); font-style: italic; font-size: 12.5px;
+                color: var(--ink-soft); letter-spacing: .02em; }
+  .sign-name { font-family: var(--font-brush); font-size: 24px; color: var(--ink);
+               line-height: 1.2; margin-top: 3px; white-space: nowrap; }
+  .quill { width: 46px; height: auto; flex: none; opacity: .3; display: block; }
+  .revealed .quill { animation: vrFloat 6.5s ease-in-out infinite; }
+
+  .actions-row { margin-top: 16px; padding-top: 15px; border-top: 1px solid var(--line-strong);
+                 display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+  #status { font-size: 12px; color: var(--ink-soft); max-width: 220px; min-width: 0;
+            line-height: 1.45; transition: color .2s; }
+  #status.bad { color: var(--warn); }
+  .buttons { display: flex; align-items: center; gap: 12px; }
+  button { font-family: var(--font-serif); font-weight: 600; font-size: 14px; white-space: nowrap; }
+  .buttons { flex: none; }
+  #test { padding: 10px 18px; background: transparent; border: 1.5px solid var(--accent);
+          color: var(--accent); border-radius: 6px; cursor: pointer; transition: all .15s; }
+  #test:hover:enabled { background: var(--accent); color: var(--paper); }
+  .save { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px;
+          border: none; border-radius: 6px; letter-spacing: .04em; }
+  #save { background: linear-gradient(180deg,#9B2D3A,#8A2630); color: #F6EDD8; cursor: pointer;
+          box-shadow: 0 1px 2px rgba(80,20,25,.35), inset 0 1px 0 rgba(255,255,255,.14);
+          transition: filter .15s, box-shadow .15s, transform .15s; display: none; }
+  #save:hover { filter: brightness(1.07); box-shadow: 0 6px 16px -5px rgba(80,20,25,.5); transform: translateY(-1px); }
+  #save-disabled { background: #ECE2CB; border: 1px solid #DACEB4; color: #A89D85; cursor: not-allowed; }
+
+  .stamp-ok { position: absolute; right: 46px; bottom: 96px; width: 104px; height: 104px;
+              border-radius: 50%; border: 3px double #8C2B33; color: #8C2B33; display: none;
+              align-items: center; justify-content: center; font-family: var(--font-serif);
+              font-weight: 700; font-size: 22px; transform: rotate(-7deg);
+              box-shadow: 0 0 0 2px rgba(140,43,51,.12); pointer-events: none; }
+  .stamp-fail { position: absolute; right: 56px; bottom: 116px; padding: 8px 16px 8px 21px;
+                border: 3px double #5A6478; color: #5A6478; display: none;
+                font-family: var(--font-serif); font-weight: 700; font-size: 21px; letter-spacing: .3em;
+                transform: rotate(-7deg); box-shadow: 0 0 0 2px rgba(90,100,120,.12); pointer-events: none; }
+  .stamp-ok.on { display: flex; animation: vrStamp .6s cubic-bezier(.2,.8,.3,1.5); }
+  .stamp-fail.on { display: block; animation: vrStamp .5s cubic-bezier(.2,.8,.3,1.4); }
+
+  @keyframes vrStamp { 0% { transform: scale(2.3) rotate(-26deg); } 55% { transform: scale(.84) rotate(-9deg); }
+                       80% { transform: scale(1.05) rotate(-6deg); } 100% { transform: scale(1) rotate(-7deg); } }
+  @keyframes vrFloat { 0%,100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-7px) rotate(1deg); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+    .reveal { opacity: 1; transform: none; }
+    .photo:hover { transform: rotate(-1.8deg); }
+  }
+</style>
+</head>
+<body>
+  <div class="intro">
+    <div class="smallcaps">Her Atelier · Twilight</div>
+    <h1>薇尔莉特的工作台</h1>
+    <p>桌上摊着一封她给你的「受理书」，仔细阅读后填写信息，点击确认后落朱红「受理済」印，即代表委托开始。</p>
+  </div>
+
+  <div class="composition">
+    <div class="envelope"><div class="flap"></div><span class="wax"></span></div>
+
+    <div class="photo-col">
+      <div class="photo">
+        <div class="photo-well"><img src="/assets/violet-photo.webp" alt="薇尔莉特·伊芙加登 · Violet Evergarden 2017"/></div>
+        <span class="washi"></span>
+        <div class="photo-caption">薇尔莉特，2017</div>
+      </div>
+      <div class="photo-under">桌上留着的一张照片</div>
+    </div>
+
+    <div class="letter" id="letter">
+      <div class="frame">
+        <div class="outer"></div><div class="inner"></div>
+        <span class="dm tl"></span><span class="dm tr"></span><span class="dm bl"></span><span class="dm br"></span>
+      </div>
+
+      <div class="reveal d0">
+        <div class="masthead-row">
+          <div class="masthead-left">
+            <img src="/assets/typewriter.png" alt="老式打字机"/>
+            <div>
+              <div class="mast-title">自动手记人偶 · 配置</div>
+              <div class="mast-sub">Violet-Refine · 受理书</div>
+            </div>
+          </div>
+          <div class="mast-no">No. Violet Evergarden-2017</div>
+        </div>
+        <div class="mast-rule"></div>
+      </div>
+
+      <div class="salutation reveal d1">敬启者 ——</div>
+
+      <blockquote class="quote reveal d2">
+        <p class="jp">「お客様がお望みならどこでも駆けつけます。自動手記人形サービス、ヴァイオレット・エヴァーガーデンです。」</p>
+        <p class="cn">只要客人您愿意，无论天涯海角我都会立刻赶到。这里是自动手记人偶服务——薇尔莉特·伊芙加登</p>
+      </blockquote>
+
+      <p class="privacy reveal d3">这份受理书，只为你一人展开。API Key 将存入你的 macOS 钥匙串，就像一封只寄往你手中的信——唯有你能启封。</p>
+
+      <p class="warning reveal d4">也请别把 API Key 交给 Claude、Codex 或任何聊天窗口——只需要在这里填写并保存。</p>
+
+      <div class="field reveal d5">
+        <div class="field-label">服务商</div>
+        <div class="select-wrap">
+          <select id="provider">__PROVIDER_OPTIONS__</select>
+          <span class="chevron">▾</span>
+        </div>
+        <p class="apply-hint">还没有 Key？去这里申请：<a id="apply-url" href="#" target="_blank"></a></p>
+      </div>
+
+      <div class="field reveal d6">
+        <div class="field-label">API Key</div>
+        <div class="key-wrap">
+          <input id="api_key" type="password" autocomplete="new-password" spellcheck="false" placeholder="在服务商网站申请后粘贴到这里"/>
+          <button type="button" id="key-eye" aria-label="显示或隐藏 API Key">
+            <svg id="eye-show" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg id="eye-hide" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/><line x1="3" y1="3" x2="21" y2="21"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="sign-row reveal d7">
+        <div>
+          <div class="sign-small">为每一段文字，找回到它本该有的温度</div>
+          <div class="sign-name">薇尔莉特 · 伊芙加登</div>
+        </div>
+        <img class="quill" src="/assets/quill.png" alt=""/>
+      </div>
+
+      <div class="actions-row reveal d8">
+        <span id="status">请先「测试连接」，确认凭证可用——我再为你钤印封缄。</span>
+        <div class="buttons">
+          <button type="button" id="test">测试连接</button>
+          <button type="button" id="save" class="save">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#EBCB80" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M5 22h14"/><path d="M19.27 13.73A2.5 2.5 0 0 0 17.5 13h-11A2.5 2.5 0 0 0 4 15.5V17a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1.5c0-.66-.26-1.3-.73-1.77Z"/><path d="M14 13V8.5C14 7 15 7 15 5a3 3 0 0 0-6 0c0 2 1 2 1 3.5V13"/></svg>封缄保存</button>
+          <button type="button" id="save-disabled" class="save" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#BEB39A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M5 22h14"/><path d="M19.27 13.73A2.5 2.5 0 0 0 17.5 13h-11A2.5 2.5 0 0 0 4 15.5V17a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1.5c0-.66-.26-1.3-.73-1.77Z"/><path d="M14 13V8.5C14 7 15 7 15 5a3 3 0 0 0-6 0c0 2 1 2 1 3.5V13"/></svg>封缄保存</button>
+        </div>
+      </div>
+
+      <div class="stamp-ok" id="stamp-ok">受理済</div>
+      <div class="stamp-fail" id="stamp-fail">未達</div>
+    </div>
+  </div>
+
+  <script>
+    const SETUP_TOKEN = "__SETUP_TOKEN__";
+    const PROVIDER_URLS = __PROVIDER_URLS__;
+    const STATUS_TEXT = {
+      idle: "请先「测试连接」，确认凭证可用——我再为你钤印封缄。",
+      nokey: "还没收到凭证，请先填入 API Key。",
+      testing: "正在为你确认连接……",
+      ok: "凭证确认可用，随时可以钤印封缄。",
+      saved: "已封缄保存 ✓ 委托已受理，交给我吧。",
+      fail: "连接未成功——请核对 API Key 与服务商是否匹配，再试一次。",
+    };
+
+    const $ = (id) => document.getElementById(id);
+    let status = "idle";
+
+    function render(overrideText) {
+      $("status").textContent = overrideText || STATUS_TEXT[status];
+      $("status").className = (status === "fail" || status === "nokey") ? "bad" : "";
+      $("api_key").className = (status === "fail" || status === "nokey") ? "bad" : "";
+      const canSave = $("api_key").value.trim() && (status === "ok" || status === "saved");
+      $("save").style.display = canSave ? "inline-flex" : "none";
+      $("save-disabled").style.display = canSave ? "none" : "inline-flex";
+      $("stamp-ok").className = "stamp-ok" + ((status === "ok" || status === "saved") ? " on" : "");
+      $("stamp-fail").className = "stamp-fail" + (status === "fail" ? " on" : "");
+    }
+
+    function setStatus(next, overrideText) { status = next; render(overrideText); }
+
+    function syncApplyUrl() {
+      const url = PROVIDER_URLS[$("provider").value] || "";
+      const a = $("apply-url");
+      a.textContent = url; a.href = url || "#";
+    }
+
+    async function post(path) {
+      const body = new URLSearchParams({
+        setup_token: SETUP_TOKEN,
+        provider: $("provider").value,
+        api_key: $("api_key").value,
+      });
+      const response = await fetch(path, { method: "POST", body });
+      return { status: response.status, text: await response.text() };
+    }
+
+    $("provider").addEventListener("change", () => { setStatus("idle"); syncApplyUrl(); });
+    $("api_key").addEventListener("input", () => setStatus("idle"));
+
+    $("key-eye").addEventListener("click", () => {
+      const input = $("api_key");
+      const show = input.type === "password";
+      input.type = show ? "text" : "password";
+      $("eye-show").style.display = show ? "none" : "block";
+      $("eye-hide").style.display = show ? "block" : "none";
+      input.focus();
+    });
+
+    $("test").addEventListener("click", async () => {
+      if (!$("api_key").value.trim()) { setStatus("nokey"); return; }
+      setStatus("testing");
+      try {
+        const { text } = await post("/test");
+        setStatus(JSON.parse(text).ok ? "ok" : "fail");
+      } catch (e) { setStatus("fail"); }
+    });
+
+    $("save").addEventListener("click", async () => {
+      try {
+        const { status: code, text } = await post("/save");
+        if (code === 200) {
+          setStatus("saved");
+          $("test").disabled = true;
+          $("save").style.display = "none";
+        } else {
+          setStatus("fail", text);
+        }
+      } catch (e) { setStatus("fail"); }
+    });
+
+    syncApplyUrl();
+    render();
+    setTimeout(() => $("letter").classList.add("revealed"), 60);
+  </script>
+</body>
+</html>

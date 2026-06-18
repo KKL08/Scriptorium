@@ -1,0 +1,8 @@
+本目录的字体为 SIL Open Font License 1.1 授权的开源字体子集（pyftsubset 生成，仅含 setup 页面用到的字形）：
+
+- ma-shan-zheng.sub.woff2  — Ma Shan Zheng, Copyright 2019 The Ma Shan Zheng Project Authors (https://github.com/googlefonts/mashanzheng)
+- courier-prime.sub.woff2  — Courier Prime, Copyright 2015 The Courier Prime Project Authors (https://github.com/quoteunquoteapps/courierprime)
+- cormorant.sub.woff2 / cormorant-italic.sub.woff2 — Cormorant Garamond, Copyright 2015 The Cormorant Project Authors (https://github.com/CatharsisFonts/Cormorant)
+
+完整 OFL 1.1 协议文本：https://openfontlicense.org
+页面正文的 Noto Serif SC / Noto Sans SC 未打包，使用 macOS 系统字体（Songti SC / PingFang SC）兜底。

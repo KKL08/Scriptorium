@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# 向上找 pyproject.toml 定位项目根：开发仓（scripts 上三层）和发布扁平布局（上一层）都适用
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+while [ ! -f "$ROOT/pyproject.toml" ] && [ "$ROOT" != "/" ]; do
+  ROOT="$(dirname "$ROOT")"
+done
+if [ ! -f "$ROOT/pyproject.toml" ]; then
+  echo "violet-refine: 找不到项目根（pyproject.toml）" >&2
+  exit 1
+fi
+exec uv run --project "$ROOT" violet-refine "$@"
