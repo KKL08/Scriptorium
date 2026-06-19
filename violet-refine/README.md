@@ -1,7 +1,7 @@
 # Violet-Refine
 
 <p align="center">
-  <img src="docs/images/violet-portrait.jpg" width="500" alt="Violet Evergarden — Automemories" />
+  <img src="../docs/violet-refine/images/violet-portrait.jpg" width="500" alt="Violet Evergarden — Automemories" />
 </p>
 
 > *「我是自动手记人偶，薇尔莉特·伊芙加登。」*
@@ -24,7 +24,7 @@ Violet-Refine Skill 就是这样类似的设定：
 ## 来信
 
 <p align="center">
-  <img src="docs/images/violet-letters.jpg" width="700" alt="薇尔莉特 — 来信" />
+  <img src="../docs/violet-refine/images/violet-letters.jpg" width="700" alt="薇尔莉特 — 来信" />
 </p>
 
 在 Agent 里每一天都有人这样提问：
@@ -76,7 +76,7 @@ Violet-Refine skill 自带三个模式，从轻到重，供你选择：
 ## 代笔工坊
 
 <p align="center">
-  <img src="docs/images/typewriter.jpg" width="700" alt="代笔工坊 — 打字机与工作台" />
+  <img src="../docs/violet-refine/images/typewriter.jpg" width="700" alt="代笔工坊 — 打字机与工作台" />
 </p>
 
 Violet-Refine 分两层执行你的委托：
@@ -185,11 +185,11 @@ violet-refine/scripts/violet-refine auth --ui
 <table align="center">
   <tr>
     <td align="center">
-      <img src="docs/images/setup-page.png" width="420" alt="受理書 — 等待委托" />
+      <img src="../docs/violet-refine/images/setup-page.png" width="420" alt="受理書 — 等待委托" />
       <br><sub>受理書 — 等待委托</sub>
     </td>
     <td align="center">
-      <img src="docs/images/setup-done.png" width="420" alt="受理済 — 封缄完成" />
+      <img src="../docs/violet-refine/images/setup-done.png" width="420" alt="受理済 — 封缄完成" />
       <br><sub>受理済 — 封缄完成</sub>
     </td>
   </tr>
