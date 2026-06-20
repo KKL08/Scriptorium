@@ -81,15 +81,23 @@ Violet-Refine skill 自带三个模式，从轻到重，供你选择：
 
 Violet-Refine 分两层执行你的委托：
 
-```
-你："润色一下"
-       ↓
-  ┌─────────┐      ┌─────────┐      ┌──────────┐
-  │ Skill    │ ───▶ │ CLI 内核 │ ───▶ │ DeepSeek │
-  │ 交互层   │      │ 执行层   │      │ 审阅·润色 │
-  └─────────┘      └─────────┘      └──────────┘
-  理解内容           匹配规则          独立审阅
-  确认意图           组装 prompt       生成改稿
+```mermaid
+graph LR
+    U["你：润色一下"] --> A
+    subgraph A["Skill · 交互层"]
+        A1[理解内容]
+        A2[确认意图]
+    end
+    A --> B
+    subgraph B["CLI 内核 · 执行层"]
+        B1[匹配规则]
+        B2[组装 prompt]
+    end
+    B --> C
+    subgraph C["DeepSeek · 审阅润色"]
+        C1[独立审阅]
+        C2[生成改稿]
+    end
 ```
 
 结果沿原路返回，Skill 把改稿交付给你。
