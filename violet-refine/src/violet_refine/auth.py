@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 import keyring
@@ -74,9 +74,10 @@ class MissingKeyError(RuntimeError):
         super().__init__(MISSING_KEY_MESSAGE)
 
 
+# value 不进 repr：任何异常堆栈、日志打印这个对象都不能带出 key 明文
 @dataclass(frozen=True)
 class ResolvedKey:
-    value: str
+    value: str = field(repr=False)
     source: str
 
 

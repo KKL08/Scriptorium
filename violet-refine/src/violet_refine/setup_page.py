@@ -67,7 +67,15 @@ def create_setup_server(
         def log_message(self, format: str, *args: object) -> None:
             return
 
+        def _host_allowed(self) -> bool:
+            # 只接受本机 Host，拒绝 DNS rebinding 一类把外部域名解析到 127.0.0.1 的请求
+            request_host = (self.headers.get("Host") or "").rsplit(":", 1)[0]
+            return request_host in ("127.0.0.1", "localhost", "[::1]")
+
         def do_GET(self) -> None:
+            if not self._host_allowed():
+                self._send(HTTPStatus.FORBIDDEN, "Forbidden")
+                return
             if self.path == "/":
                 self._send(HTTPStatus.OK, build_setup_page(expected_token), "text/html")
                 return
@@ -79,6 +87,9 @@ def create_setup_server(
             self._send(HTTPStatus.NOT_FOUND, "Not found")
 
         def do_POST(self) -> None:
+            if not self._host_allowed():
+                self._send(HTTPStatus.FORBIDDEN, "Forbidden")
+                return
             length = int(self.headers.get("Content-Length", "0"))
             if length > 64 * 1024:
                 self._send(HTTPStatus.REQUEST_ENTITY_TOO_LARGE, "Request too large")
