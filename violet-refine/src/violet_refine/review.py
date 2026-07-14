@@ -19,11 +19,18 @@ class ReviewFinding:
 
 
 @dataclass(frozen=True)
+class CoverageNote:
+    dimension: str
+    note: str
+
+
+@dataclass(frozen=True)
 class ReviewReport:
     summary: str
     mode: str
     brief: str
     findings: list[ReviewFinding]
+    coverage: list[CoverageNote]
 
     @classmethod
     def parse(cls, raw: str, *, mode: str, brief: str) -> ReviewReport:
@@ -35,8 +42,14 @@ class ReviewReport:
         if not isinstance(data, dict):
             raise ValueError("Review report must be a JSON object.")
         findings = data.get("findings")
-        if not isinstance(findings, list) or not findings:
-            raise ValueError("Review report needs at least one finding.")
+        if not isinstance(findings, list):
+            raise ValueError("Review report needs a findings list.")
+        coverage = data.get("coverage")
+        if not isinstance(coverage, list):
+            coverage = []
+        # findings 允许为空（干净文本零发现是合法结果），但空 findings 必须有 coverage 交代排查过程
+        if not findings and not coverage:
+            raise ValueError("Review report needs findings or coverage.")
         return cls(
             summary=str(data.get("summary", "")),
             mode=validate_mode(mode),
@@ -51,6 +64,13 @@ class ReviewReport:
                 )
                 for item in findings
             ],
+            coverage=[
+                CoverageNote(
+                    dimension=str(item.get("dimension", "")),
+                    note=str(item.get("note", "")),
+                )
+                for item in coverage
+            ],
         )
 
     def render(self) -> str:
@@ -62,10 +82,17 @@ class ReviewReport:
             f"审阅摘要：{self.summary}",
             "",
         ]
+        if not self.findings:
+            lines.append("未发现需要报告的问题。")
         for index, finding in enumerate(self.findings, start=1):
             lines.append(
                 f"{index}. [{finding.dimension}]（{finding.scope}，risk: {finding.risk}）"
             )
             lines.append(f"   {finding.description}")
             lines.append(f"   建议：{finding.suggestion}")
+        if self.coverage:
+            lines.append("")
+            lines.append("排查覆盖：")
+            for note in self.coverage:
+                lines.append(f"- {note.dimension}：{note.note}")
         return "\n".join(lines)

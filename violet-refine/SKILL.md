@@ -73,7 +73,7 @@ skill/violet-refine/scripts/violet-refine run --workflow review --mode refine \
   --file path/to/input.md
 ```
 
-review 后用面向用户的表述总结报告：讲清查了什么、发现哪几类问题（文档架构、写作质量、AI 腔等）、建议改哪些，不照搬 JSON 字段名；然后问用户是否继续生成改稿。review 总会返回各维度的发现和建议，按风险高低排列呈现给用户。
+review 后用面向用户的表述总结报告：讲清查了什么（六个维度：语言正确性、表达自然度、句子与节奏、段落与逻辑、信息组织、保真与结构）、发现哪几类问题、建议改哪些，不照搬 JSON 字段名；然后问用户是否继续生成改稿。review 返回各维度的发现（可能为零）和排查覆盖说明，发现按风险高低排列呈现给用户。
 
 生成改稿时，把 review 的原始输出存到临时文件，通过 `--review-context` 传给 direct 调用，让改写严格按审阅建议执行：
 
