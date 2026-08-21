@@ -99,6 +99,7 @@
   .revealed .reveal { opacity: 1; transform: none; }
   .d0 { transition-delay: 0s; }   .d1 { transition-delay: .06s; }  .d2 { transition-delay: .12s; }
   .d3 { transition-delay: .18s; } .d4 { transition-delay: .22s; }  .d5 { transition-delay: .28s; }
+  .d5b { transition-delay: .25s; }
   .d6 { transition-delay: .34s; } .d7 { transition-delay: .4s; }   .d8 { transition-delay: .46s; }
 
   .masthead-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
@@ -257,6 +258,14 @@
         <p class="apply-hint">还没有 Key？去这里申请：<a id="apply-url" href="#" target="_blank"></a></p>
       </div>
 
+      <div class="field reveal d5b" id="model-field" style="display:none">
+        <div class="field-label">模型</div>
+        <div class="select-wrap">
+          <select id="model"></select>
+          <span class="chevron">▾</span>
+        </div>
+      </div>
+
       <div class="field reveal d6">
         <div class="field-label">API Key</div>
         <div class="key-wrap">
@@ -295,6 +304,8 @@
   <script>
     const SETUP_TOKEN = "__SETUP_TOKEN__";
     const PROVIDER_URLS = __PROVIDER_URLS__;
+    const PROVIDER_MODELS = __PROVIDER_MODELS__;
+    const DEFAULT_MODELS = __DEFAULT_MODELS__;
     const STATUS_TEXT = {
       idle: "请先「测试连接」，确认凭证可用——我再为你钤印封缄。",
       nokey: "还没收到凭证，请先填入 API Key。",
@@ -326,17 +337,37 @@
       a.textContent = url; a.href = url || "#";
     }
 
+    function syncModelDropdown() {
+      const provider = $("provider").value;
+      const models = PROVIDER_MODELS[provider];
+      const modelField = $("model-field");
+      const modelSelect = $("model");
+
+      if (!models) {
+        modelField.style.display = "none";
+        modelSelect.innerHTML = "";
+        return;
+      }
+
+      const defaultModel = DEFAULT_MODELS[provider] || "";
+      modelSelect.innerHTML = models.map(m =>
+        `<option value="${m.id}"${m.id === defaultModel ? " selected" : ""}>${m.label}</option>`
+      ).join("");
+      modelField.style.display = "";
+    }
+
     async function post(path) {
       const body = new URLSearchParams({
         setup_token: SETUP_TOKEN,
         provider: $("provider").value,
+        model: $("model").value || "",
         api_key: $("api_key").value,
       });
       const response = await fetch(path, { method: "POST", body });
       return { status: response.status, text: await response.text() };
     }
 
-    $("provider").addEventListener("change", () => { setStatus("idle"); syncApplyUrl(); });
+    $("provider").addEventListener("change", () => { setStatus("idle"); syncApplyUrl(); syncModelDropdown(); });
     $("api_key").addEventListener("input", () => setStatus("idle"));
 
     $("key-eye").addEventListener("click", () => {
@@ -371,6 +402,7 @@
     });
 
     syncApplyUrl();
+    syncModelDropdown();
     render();
     setTimeout(() => $("letter").classList.add("revealed"), 60);
   </script>

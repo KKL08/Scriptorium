@@ -94,7 +94,7 @@ graph LR
         B2[组装 prompt]
     end
     B --> C
-    subgraph C["DeepSeek · 审阅润色"]
+    subgraph C["外部模型 · 审阅润色"]
         C1[独立审阅]
         C2[生成改稿]
     end
@@ -120,11 +120,9 @@ Skill 可调用外部模型 API. 配置 key 是通过拉起本地页面快速配
 
 ### 工作间的 API 管线
 
-首批支持使用 **DeepSeek V4 Pro** 官方 API 调用。
+目前支持三个模型：**DeepSeek V4 Pro**（推荐）、**DeepSeek V4 Flash** 和 **Gemini 3.7 Flash**（推荐）。配置页面选好服务商后可以切换模型。
 
-我们推荐使用不同源的模型进行写作质量review。例如 Violet-Refine 默认用 DeepSeek review Claude 或 GPT 的产出——比同模型自己改自己要有效得多。不同源的模型能抓到那些在对方训练分布里「看起来似乎没毛病」的写法。
-
-选 DeepSeek V4 Pro 做首批支持是因为：中文写作润色对模型有两个基本要求——基座的世界知识要够丰富，中文写作语料的积累要够深，两者缺一不可。DeepSeek V4 Pro 的参数量带来了足够的世界知识覆盖，加上它在中文写作语料上下过功夫，拿它改 Claude 和 GPT 的中文产出，效果最稳。
+推荐用不同源的模型做 review。Violet-Refine 默认用 DeepSeek review Claude 或 GPT 的产出——不同训练语料体系下的模型能抓到对方觉得「似乎没问题」的写法。DeepSeek V4 Pro 参数量大、中文语料积累深，综合润色效果出色；V4 Flash 输出更快，适合高频快速润色；Gemini 3.7 Flash 世界知识广，中文写作能力不凡，适合深度润色。
 
 ---
 
@@ -134,7 +132,7 @@ Violet-Refine 内置丰富的多层规则经验库，用于 Skill 智能审阅�
 
 ```
   ┌───────────────────────┐
-  │ 📘 场景软约束 C01–C08  │  ← 按语境选用
+  │ 📘 场景软约束 C01–C09  │  ← 按语境选用
   ├───────────────────────┤
   │ 📕 强规则 S01–S10      │  ← refine / rewrite 生效
   ├───────────────────────┤
@@ -176,7 +174,7 @@ refine 和 rewrite 生效，对 AI 味精准打击：
 
 - Python 3.11+
 - [uv](https://docs.astral.sh/uv/)
-- 至少一个 LLM provider 的 API Key（目前支持 [DeepSeek](https://platform.deepseek.com/)，需在官网注册账号并创建 Key）
+- 至少一个 LLM provider 的 API Key（支持 [DeepSeek](https://platform.deepseek.com/) 和 [Google AI Studio](https://aistudio.google.com/)）
 
 ### 三步走
 
@@ -203,7 +201,7 @@ violet-refine/scripts/violet-refine auth --ui
   </tr>
 </table>
 
-选好服务商（目前仅首批支持 DeepSeek）、填入 Key，点击「测试连接」通过后再点「封缄保存」。Key 就会存进系统钥匙串，不会被当前 AI 读取。
+选好服务商和模型、填入 Key，点击「测试连接」通过后再点「封缄保存」。Key 就会存进系统钥匙串，不会被当前 AI 读取。
 
 ```bash
 # 3. 在 Claude Code、Codex 等 agent 里直接调用，例如
@@ -239,4 +237,4 @@ violet-refine/scripts/violet-refine run --workflow direct --mode refine \
 ## 后续 Roadmap
 
 - [ ] 记忆偏好：积累用户的写作习惯和偏好，自主优化迭代规则库
-- [ ] 更多模型 provider 支持
+- [x] 更多模型支持（现已支持 DeepSeek V4 Pro / Flash、Gemini 3.7 Flash，后续会更新更多适合的模型）

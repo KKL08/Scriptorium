@@ -18,6 +18,30 @@ SCHEMA_FAILURE_EXIT = 4
 # DeepSeek v4 官方输出上限 384K（api-docs.deepseek.com 模型规格页）
 DEEPSEEK_MAX_OUTPUT_TOKENS = 384_000
 
+DEEPSEEK_FLASH_MODEL = "deepseek/deepseek-v4-flash"
+
+
+def build_request_options(provider: str, model: str, mode: str) -> dict[str, object]:
+    """根据 provider/model/mode 组合返回模型请求参数。"""
+    if provider == "deepseek":
+        opts: dict[str, object] = {
+            "max_tokens": DEEPSEEK_MAX_OUTPUT_TOKENS,
+            "thinking": {"type": "enabled"},
+        }
+        if model == DEEPSEEK_FLASH_MODEL:
+            # V4 Flash 的 reasoning_effort 最高到 high，rewrite 不像 Pro 用 max
+            opts["reasoning_effort"] = "high"
+        else:
+            # V4 Pro：rewrite 用 max，其他用 high
+            opts["reasoning_effort"] = "max" if mode == "rewrite" else "high"
+        return opts
+
+    if provider == "google":
+        # litellm 已对 Gemini 3+ 弃用 temperature（仍生效但计划移除），不传
+        return {"reasoning_effort": "medium"}
+
+    return {}
+
 
 def _read_input(file: Path | None) -> str:
     if file is not None:
@@ -51,14 +75,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
         review_context=review_context,
     )
 
-    # thinking/reasoning_effort 是 DeepSeek 专有参数（合法取值 high/max），其他 provider 不传
-    request_options: dict[str, object] = {}
-    if config.provider == "deepseek":
-        request_options = {
-            "max_tokens": DEEPSEEK_MAX_OUTPUT_TOKENS,
-            "thinking": {"type": "enabled"},
-            "reasoning_effort": "max" if args.mode == "rewrite" else "high",
-        }
+    request_options = build_request_options(config.provider, model, args.mode)
 
     def complete() -> str:
         return client.complete(

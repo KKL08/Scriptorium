@@ -17,7 +17,7 @@ SETUP_SUCCESS_MESSAGE = "API Key 已保存，可以关闭这个页面，回到�
 
 # 页面下拉只露出这里列的服务商；后端（resolve_key/config）仍支持 PROVIDERS 全表，
 # 其他服务商验证过真实调用后再加回来
-SETUP_PAGE_PROVIDERS = ("deepseek",)
+SETUP_PAGE_PROVIDERS = ("deepseek", "google")
 
 # 页面与素材来自设计交付包（design-handoff/，薇尔莉特的工作台 v3），随包分发
 ASSETS_DIR = Path(__file__).resolve().parent / "setup_assets"
@@ -39,10 +39,18 @@ def build_setup_page(token: str) -> str:
         for name in SETUP_PAGE_PROVIDERS
     )
     urls = {name: PROVIDERS[name].key_url for name in SETUP_PAGE_PROVIDERS}
+    models_data = {
+        name: [{"id": m.id, "label": m.label} for m in PROVIDERS[name].models]
+        for name in SETUP_PAGE_PROVIDERS
+        if PROVIDERS[name].models
+    }
+    default_models = {name: PROVIDERS[name].default_model for name in SETUP_PAGE_PROVIDERS}
     return (
         template.replace("__SETUP_TOKEN__", html.escape(token, quote=True))
         .replace("__PROVIDER_OPTIONS__", options)
         .replace("__PROVIDER_URLS__", json.dumps(urls, ensure_ascii=False))
+        .replace("__PROVIDER_MODELS__", json.dumps(models_data, ensure_ascii=False))
+        .replace("__DEFAULT_MODELS__", json.dumps(default_models, ensure_ascii=False))
     )
 
 
@@ -103,10 +111,16 @@ def create_setup_server(
                 # /test 不校验 setup token：它不读取已存密钥、不落盘，只用请求里的 key 发一次探测请求
                 try:
                     provider_for(field("provider"))
-                    # DeepSeek 服务端 thinking 默认开启，16 token 的探测会被思考过程耗尽，显式关掉
-                    probe_options = (
-                        {"thinking": {"type": "disabled"}} if field("provider") == "deepseek" else {}
-                    )
+                    # 探测只配 16 token：DeepSeek 服务端 thinking 默认开启、Gemini 默认有思考过程，
+                    # 都会把这个预算耗光，显式压低
+                    if field("provider") == "deepseek":
+                        probe_options = {"thinking": {"type": "disabled"}}
+                    elif field("provider") == "google":
+                        # "none" 会被 litellm 映射成 thinkingLevel=minimal，gemini-3.7-flash
+                        # 的真实 API 不接受该档位（400），用支持的最低档 low
+                        probe_options = {"reasoning_effort": "low"}
+                    else:
+                        probe_options = {}
                     llm_client.complete(
                         [{"role": "user", "content": "回复一个字：好"}],
                         model=_resolve_request_model(field("provider"), field("model")),

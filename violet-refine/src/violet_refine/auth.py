@@ -11,11 +11,18 @@ MISSING_KEY_MESSAGE = "本地 API Key 还没配置好。运行 violet-refine aut
 
 
 @dataclass(frozen=True)
+class ModelSpec:
+    id: str  # litellm 模型字符串，如 "deepseek/deepseek-v4-pro"
+    label: str  # 页面展示名，如 "DeepSeek V4 Pro"
+
+
+@dataclass(frozen=True)
 class Provider:
     env: str
-    default_model: str
+    default_model: str  # 值是 models 里某个 ModelSpec.id
     label: str
     key_url: str
+    models: tuple[ModelSpec, ...] = ()  # 空 tuple 表示不在页面展示模型选择
 
 
 # 顺序就是 setup 页面下拉的顺序，第一项是默认选中项；主要用户在 Codex/Claude，默认推荐 DeepSeek
@@ -25,6 +32,19 @@ PROVIDERS: dict[str, Provider] = {
         default_model="deepseek/deepseek-v4-pro",
         label="DeepSeek",
         key_url="https://platform.deepseek.com/",
+        models=(
+            ModelSpec(id="deepseek/deepseek-v4-pro", label="DeepSeek V4 Pro"),
+            ModelSpec(id="deepseek/deepseek-v4-flash", label="DeepSeek V4 Flash"),
+        ),
+    ),
+    "google": Provider(
+        env="GEMINI_API_KEY",
+        default_model="gemini/gemini-3.7-flash",
+        label="Google（Gemini）",
+        key_url="https://aistudio.google.com/",
+        models=(
+            ModelSpec(id="gemini/gemini-3.7-flash", label="Gemini 3.7 Flash"),
+        ),
     ),
     "anthropic": Provider(
         env="ANTHROPIC_API_KEY",
