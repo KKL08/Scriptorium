@@ -78,7 +78,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
 
     try:
         raw = complete()
-    except Exception as error:  # noqa: BLE001 - litellm 异常族杂，统一报请求失败
+    except Exception as error:  # noqa: BLE001 - 顶层兜底：任何请求失败都转成给用户的干净提示
         print(f"模型请求失败：{error}。可以稍后重试，或改用 host 模型路径。", file=sys.stderr)
         return 1
 
