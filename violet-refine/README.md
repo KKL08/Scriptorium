@@ -120,9 +120,9 @@ Skill 可调用外部模型 API. 配置 key 是通过拉起本地页面快速配
 
 ### 工作间的 API 管线
 
-目前支持三个模型：**DeepSeek V4 Pro**（推荐）、**DeepSeek V4 Flash** 和 **Gemini 3.7 Flash**（推荐）。配置页面选好服务商后可以切换模型。
+目前支持四个模型：**DeepSeek V4 Pro**（推荐）、**DeepSeek V4.1 Flash**、**Gemini 3.7 Flash**（推荐）和 **Gemini 3.8 Flash**。配置页面选好服务商后可以切换模型；也支持自定义 OpenAI 兼容接口——自填模型名和 Base URL，Ollama、vLLM 这类本地或第三方端点都能接。
 
-推荐用不同源的模型做 review。Violet-Refine 默认用 DeepSeek review Claude 或 GPT 的产出——不同训练语料体系下的模型能抓到对方觉得「似乎没问题」的写法。DeepSeek V4 Pro 参数量大、中文语料积累深，综合润色效果出色；V4 Flash 输出更快，适合高频快速润色；Gemini 3.7 Flash 世界知识广，中文写作能力不凡，适合深度润色。
+推荐用不同源的模型做 review。Violet-Refine 默认用 DeepSeek review Claude 或 GPT 的产出——不同训练语料体系下的模型能抓到对方觉得「似乎没问题」的写法。DeepSeek V4 Pro 参数量大、中文语料积累深，综合润色效果出色；V4.1 Flash 输出更快，适合高频快速润色；Gemini 3.7 Flash 世界知识广，中文写作能力不凡，适合深度润色；3.8 Flash 是同系列的更新版，按需选用。
 
 ---
 
@@ -174,7 +174,7 @@ refine 和 rewrite 生效，对 AI 味精准打击：
 
 - Python 3.11+
 - [uv](https://docs.astral.sh/uv/)
-- 至少一个 LLM provider 的 API Key（支持 [DeepSeek](https://platform.deepseek.com/) 和 [Google AI Studio](https://aistudio.google.com/)）
+- 至少一个 LLM provider 的 API Key（支持 [DeepSeek](https://platform.deepseek.com/)、[Google AI Studio](https://aistudio.google.com/)，或任何标准 OpenAI Chat Completions 兼容端点）
 
 ### 三步走
 
@@ -237,4 +237,4 @@ violet-refine/scripts/violet-refine run --workflow direct --mode refine \
 ## 后续 Roadmap
 
 - [ ] 记忆偏好：积累用户的写作习惯和偏好，自主优化迭代规则库
-- [x] 更多模型支持（现已支持 DeepSeek V4 Pro / Flash、Gemini 3.7 Flash，后续会更新更多适合的模型）
+- [x] 更多模型支持（现已支持 DeepSeek V4 Pro / V4.1 Flash、Gemini 3.7 / 3.8 Flash，并支持自定义 OpenAI 兼容接口，后续会更新更多适合的模型）

@@ -5,42 +5,31 @@ import sys
 import webbrowser
 from pathlib import Path
 
-from violet_refine.auth import KeyringStore, MissingKeyError, provider_for, resolve_key
+from violet_refine.auth import KeyringStore, MissingKeyError, model_spec_for, provider_for, resolve_key
 from violet_refine.config import DEFAULT_CONFIG_PATH, load_runtime_config
 from violet_refine.diffing import unified_diff
-from violet_refine.llm import LiteLLMClient
+from violet_refine.llm import HttpLLMClient
 from violet_refine.prompts import VALID_MODES, build_messages
 from violet_refine.review import ReviewReport
 from violet_refine.setup_page import create_setup_server
 
 SCHEMA_FAILURE_EXIT = 4
 
-# DeepSeek v4 官方输出上限 384K（api-docs.deepseek.com 模型规格页）
-DEEPSEEK_MAX_OUTPUT_TOKENS = 384_000
-
-DEEPSEEK_FLASH_MODEL = "deepseek/deepseek-v4-flash"
-
 
 def build_request_options(provider: str, model: str, mode: str) -> dict[str, object]:
-    """根据 provider/model/mode 组合返回模型请求参数。"""
-    if provider == "deepseek":
-        opts: dict[str, object] = {
-            "max_tokens": DEEPSEEK_MAX_OUTPUT_TOKENS,
-            "thinking": {"type": "enabled"},
-        }
-        if model == DEEPSEEK_FLASH_MODEL:
-            # V4 Flash 的 reasoning_effort 最高到 high，rewrite 不像 Pro 用 max
-            opts["reasoning_effort"] = "high"
-        else:
-            # V4 Pro：rewrite 用 max，其他用 high
-            opts["reasoning_effort"] = "max" if mode == "rewrite" else "high"
-        return opts
-
-    if provider == "google":
-        # litellm 已对 Gemini 3+ 弃用 temperature（仍生效但计划移除），不传
-        return {"reasoning_effort": "medium"}
-
-    return {}
+    """根据 provider/model/mode 组合归一化请求参数；数据来自 PROVIDERS 里的 ModelSpec 元数据。"""
+    spec = model_spec_for(provider, model)
+    if spec is None:
+        return {}
+    opts: dict[str, object] = {}
+    if spec.max_output_tokens is not None:
+        opts["max_tokens"] = spec.max_output_tokens
+    if spec.thinking:
+        opts["thinking"] = {"type": "enabled"}
+    effort = spec.effort_by_mode.get(mode, spec.default_effort)
+    if effort:
+        opts["reasoning_effort"] = effort
+    return opts
 
 
 def _read_input(file: Path | None) -> str:
@@ -55,12 +44,12 @@ def _cmd_run(args: argparse.Namespace) -> int:
     try:
         text = _read_input(args.file)
         config = load_runtime_config(DEFAULT_CONFIG_PATH)
-        key = resolve_key(config.provider, store=KeyringStore())
+        key = resolve_key(config.provider, store=KeyringStore(), credential_id=config.credential_id)
     except (ValueError, OSError, MissingKeyError) as error:
         print(str(error), file=sys.stderr)
         return 1
 
-    client = LiteLLMClient()
+    client = HttpLLMClient()
     model = args.model or config.model
     review_context = ""
     if args.review_context is not None:
@@ -80,6 +69,7 @@ def _cmd_run(args: argparse.Namespace) -> int:
     def complete() -> str:
         return client.complete(
             messages,
+            provider=config.provider,
             model=model,
             api_key=key.value,
             api_base=config.api_base,
@@ -120,7 +110,7 @@ def _cmd_auth(args: argparse.Namespace) -> int:
     config = load_runtime_config(DEFAULT_CONFIG_PATH)
 
     if args.ui:
-        server, url, _ = create_setup_server(store=KeyringStore(), llm_client=LiteLLMClient())
+        server, url, _ = create_setup_server(store=KeyringStore(), llm_client=HttpLLMClient())
         print(f"本机配置页面已打开：{url}")
         print("如果浏览器没有自动弹出，手动打开上面这个地址。配置完成后这里会自动结束。")
         webbrowser.open(url)
@@ -135,7 +125,7 @@ def _cmd_auth(args: argparse.Namespace) -> int:
     print(f"服务商：{config.provider}")
     print(f"模型：{config.model}")
     try:
-        key = resolve_key(config.provider, store=KeyringStore())
+        key = resolve_key(config.provider, store=KeyringStore(), credential_id=config.credential_id)
         print(f"API Key：已配置（来源：{'环境变量' if key.source == 'env' else '本机钥匙串'}）")
         return 0
     except MissingKeyError:

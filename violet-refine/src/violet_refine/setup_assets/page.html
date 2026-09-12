@@ -99,7 +99,7 @@
   .revealed .reveal { opacity: 1; transform: none; }
   .d0 { transition-delay: 0s; }   .d1 { transition-delay: .06s; }  .d2 { transition-delay: .12s; }
   .d3 { transition-delay: .18s; } .d4 { transition-delay: .22s; }  .d5 { transition-delay: .28s; }
-  .d5b { transition-delay: .25s; }
+  .d5b { transition-delay: .25s; } .d5c { transition-delay: .29s; }
   .d6 { transition-delay: .34s; } .d7 { transition-delay: .4s; }   .d8 { transition-delay: .46s; }
 
   .masthead-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
@@ -136,6 +136,12 @@
   .apply-hint { margin: 7px 0 0; font-family: var(--font-mono); font-size: 12px;
                 color: var(--ink-soft); word-break: break-all; }
   .apply-hint a { color: var(--accent); }
+  input#model-text, input#api_base { width: 100%; box-sizing: border-box; padding: 8px 2px;
+                  font-size: 15px; color: var(--ink); background: transparent; border: none;
+                  border-bottom: 1.5px solid var(--line-strong); border-radius: 0; outline: none;
+                  transition: border-color .2s; }
+  input#api_base { font-family: var(--font-mono); font-size: 14px; letter-spacing: .03em; }
+  input#model-text:focus, input#api_base:focus { border-bottom-color: var(--accent); }
   .key-wrap { position: relative; }
   input#api_key { width: 100%; box-sizing: border-box; padding: 8px 30px 8px 2px; font-family: var(--font-mono);
                   font-size: 14px; color: var(--ink); background: transparent; border: none;
@@ -255,15 +261,24 @@
           <select id="provider">__PROVIDER_OPTIONS__</select>
           <span class="chevron">▾</span>
         </div>
-        <p class="apply-hint">还没有 Key？去这里申请：<a id="apply-url" href="#" target="_blank"></a></p>
+        <p class="apply-hint" id="apply-hint">还没有 Key？去这里申请：<a id="apply-url" href="#" target="_blank"></a></p>
       </div>
 
       <div class="field reveal d5b" id="model-field" style="display:none">
         <div class="field-label">模型</div>
-        <div class="select-wrap">
+        <div class="select-wrap" id="model-select-wrap">
           <select id="model"></select>
           <span class="chevron">▾</span>
         </div>
+        <input id="model-text" type="text" spellcheck="false" autocomplete="off"
+               placeholder="填入模型名，例如 gpt-4o、llama-3.1-70b" style="display:none"/>
+      </div>
+
+      <div class="field reveal d5c" id="base-field" style="display:none">
+        <div class="field-label">接口地址（Base URL）</div>
+        <input id="api_base" type="text" spellcheck="false" autocomplete="off"
+               placeholder="接口地址，例如 http://localhost:11434/v1"/>
+        <p class="apply-hint">需为标准 OpenAI Chat Completions 端点；base 路径按你的服务填写（如已含 /v1 就带上）。</p>
       </div>
 
       <div class="field reveal d6">
@@ -334,41 +349,75 @@
     function syncApplyUrl() {
       const url = PROVIDER_URLS[$("provider").value] || "";
       const a = $("apply-url");
-      a.textContent = url; a.href = url || "#";
+      const hint = $("apply-hint");
+      if (!url) { hint.style.display = "none"; return; }
+      hint.style.display = "";
+      a.textContent = url; a.href = url;
+    }
+
+    const isCustomProvider = () => $("provider").value === "openai-compatible";
+
+    function currentModelValue() {
+      return isCustomProvider() ? $("model-text").value.trim() : ($("model").value || "");
     }
 
     function syncModelDropdown() {
       const provider = $("provider").value;
       const models = PROVIDER_MODELS[provider];
+      const custom = isCustomProvider();
       const modelField = $("model-field");
       const modelSelect = $("model");
 
-      if (!models) {
+      $("base-field").style.display = custom ? "" : "none";
+      $("model-select-wrap").style.display = models ? "" : "none";
+      $("model-text").style.display = custom ? "" : "none";
+
+      if (!models && !custom) {
         modelField.style.display = "none";
         modelSelect.innerHTML = "";
         return;
       }
 
-      const defaultModel = DEFAULT_MODELS[provider] || "";
-      modelSelect.innerHTML = models.map(m =>
-        `<option value="${m.id}"${m.id === defaultModel ? " selected" : ""}>${m.label}</option>`
-      ).join("");
       modelField.style.display = "";
+      if (models) {
+        const defaultModel = DEFAULT_MODELS[provider] || "";
+        modelSelect.innerHTML = models.map(m =>
+          `<option value="${m.id}"${m.id === defaultModel ? " selected" : ""}>${m.label}</option>`
+        ).join("");
+      }
+    }
+
+    function fieldSnapshot() {
+      // 已测状态绑定提交时的字段快照：测试期间改过字段，旧响应不得再标记成功
+      return JSON.stringify([
+        $("provider").value, currentModelValue(), $("api_key").value,
+        isCustomProvider() ? $("api_base").value.trim() : "",
+      ]);
     }
 
     async function post(path) {
-      const body = new URLSearchParams({
+      const body = {
         setup_token: SETUP_TOKEN,
         provider: $("provider").value,
-        model: $("model").value || "",
+        model: currentModelValue(),
         api_key: $("api_key").value,
-      });
-      const response = await fetch(path, { method: "POST", body });
+      };
+      // api_base 只属于 openai-compatible：切换到内置服务商后，残留地址绝不能随请求发出
+      if (isCustomProvider()) body.api_base = $("api_base").value.trim();
+      const response = await fetch(path, { method: "POST", body: new URLSearchParams(body) });
       return { status: response.status, text: await response.text() };
     }
 
-    $("provider").addEventListener("change", () => { setStatus("idle"); syncApplyUrl(); syncModelDropdown(); });
+    $("provider").addEventListener("change", () => {
+      setStatus("idle");
+      $("model-text").value = "";
+      $("api_base").value = "";
+      syncApplyUrl(); syncModelDropdown();
+    });
     $("api_key").addEventListener("input", () => setStatus("idle"));
+    $("model").addEventListener("change", () => setStatus("idle"));
+    $("model-text").addEventListener("input", () => setStatus("idle"));
+    $("api_base").addEventListener("input", () => setStatus("idle"));
 
     $("key-eye").addEventListener("click", () => {
       const input = $("api_key");
@@ -381,11 +430,17 @@
 
     $("test").addEventListener("click", async () => {
       if (!$("api_key").value.trim()) { setStatus("nokey"); return; }
+      if (isCustomProvider() && (!$("model-text").value.trim() || !$("api_base").value.trim())) {
+        setStatus("nokey", "自定义接口需要先填好模型名与接口地址，再测试连接。");
+        return;
+      }
+      const snapshot = fieldSnapshot();
       setStatus("testing");
       try {
         const { text } = await post("/test");
+        if (fieldSnapshot() !== snapshot) { setStatus("idle"); return; }
         setStatus(JSON.parse(text).ok ? "ok" : "fail");
-      } catch (e) { setStatus("fail"); }
+      } catch (e) { if (fieldSnapshot() === snapshot) setStatus("fail"); }
     });
 
     $("save").addEventListener("click", async () => {
