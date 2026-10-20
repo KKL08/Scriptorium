@@ -19,6 +19,7 @@ class ModelSpec:
     effort_by_mode: Mapping[str, str] = field(default_factory=dict)  # mode -> reasoning_effort
     default_effort: str | None = None  # 未命中 mode 时用
     max_output_tokens: int | None = None  # None 则用 complete 默认 8192
+    timeout_s: int | None = None  # 单次请求超时秒数；None 则用 complete 默认 300
 
 
 @dataclass(frozen=True)
@@ -57,12 +58,19 @@ PROVIDERS: dict[str, Provider] = {
     ),
     "google": Provider(
         env="GEMINI_API_KEY",
-        default_model="gemini/gemini-3.7-flash",
+        default_model="gemini/gemini-3.8-flash",
         label="Google（Gemini）",
         key_url="https://aistudio.google.com/",
         models=(
-            ModelSpec(id="gemini/gemini-3.7-flash", label="Gemini 3.7 Flash", default_effort="medium"),
             ModelSpec(id="gemini/gemini-3.8-flash", label="Gemini 3.8 Flash", default_effort="medium"),
+            # Gemini 4 非流式单次输出上限 32K 且思考 token 计入；官方建议单次超时至少 20 分钟
+            ModelSpec(
+                id="gemini/gemini-4-argon",
+                label="Gemini 4 Argon",
+                default_effort="medium",
+                max_output_tokens=32_768,
+                timeout_s=1200,
+            ),
         ),
     ),
     "anthropic": Provider(
@@ -82,6 +90,7 @@ PROVIDERS: dict[str, Provider] = {
 # 已下线模型的持久化旧串 → 目录内现行串（provider 限定，避免误伤 openai-compatible 自填裸名）
 RETIRED_MODEL_ALIASES: dict[str, dict[str, str]] = {
     "deepseek": {"deepseek/deepseek-v4-flash": "deepseek/deepseek-flash"},
+    "google": {"gemini/gemini-3.7-flash": "gemini/gemini-3.8-flash"},
 }
 
 

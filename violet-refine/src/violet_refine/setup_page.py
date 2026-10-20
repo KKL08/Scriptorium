@@ -12,6 +12,7 @@ from urllib.parse import parse_qs
 from violet_refine.auth import PROVIDERS, KeyStore, ensure_api_key_usable, provider_for
 from violet_refine.config import RuntimeConfig, ensure_config_serializable, save_runtime_config
 from violet_refine.llm import LLMClient
+from violet_refine.llm.errors import LLMTruncatedError
 
 SETUP_SUCCESS_MESSAGE = "API Key 已保存，可以关闭这个页面，回到对话继续使用。"
 
@@ -124,16 +125,19 @@ def create_setup_server(
                         probe_options = {}
                     # api_base 只属于 openai-compatible，与 /save 同一道后端防线
                     probe_base = (field("api_base").strip() or None) if provider_name == "openai-compatible" else None
-                    llm_client.complete(
-                        [{"role": "user", "content": "回复一个字：好"}],
-                        provider=provider_name,
-                        model=_resolve_request_model(provider_name, field("model")),
-                        max_tokens=16,
-                        timeout=30,
-                        api_key=field("api_key"),
-                        api_base=probe_base,
-                        **probe_options,
-                    )
+                    try:
+                        llm_client.complete(
+                            [{"role": "user", "content": "回复一个字：好"}],
+                            provider=provider_name,
+                            model=_resolve_request_model(provider_name, field("model")),
+                            max_tokens=16,
+                            timeout=30,
+                            api_key=field("api_key"),
+                            api_base=probe_base,
+                            **probe_options,
+                        )
+                    except LLMTruncatedError:
+                        pass  # 16 token 预算下截断是预期结果，请求已通过鉴权
                     # 鉴权探测：请求没抛异常即 key 可用；content 可能因 token 预算耗尽为空，不作为判据
                     payload = {"ok": True}
                 except Exception as error:  # noqa: BLE001 - 任何失败都报给页面

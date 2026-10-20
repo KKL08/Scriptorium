@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
-from violet_refine.llm.errors import LLMRequestError
+from violet_refine.llm.errors import LLMRequestError, LLMTruncatedError
+
+# MAX_TOKENS：maxOutputTokens 总预算（思考 + 正文）用尽；CONTINUATION：单次请求到上限、预算未尽
+# （非流式 32K），需带 continuationToken 续写。两者都意味着正文不完整（long-decode 指南）
+GEMINI_TRUNCATED_FINISH_REASONS = frozenset({"MAX_TOKENS", "CONTINUATION"})
 
 
 class Adapter(Protocol):
@@ -123,6 +127,9 @@ class GeminiAdapter:
         candidates = data.get("candidates") or []
         if not candidates:
             return ""
+        # 截断时绝不把半截正文当完整结果交出；文案受控，不回显正文或续写 token
+        if candidates[0].get("finishReason") in GEMINI_TRUNCATED_FINISH_REASONS:
+            raise LLMTruncatedError("google")
         # 全程防御式 .get()：candidate 缺 content/parts 视作空正文，不 KeyError
         content = candidates[0].get("content") or {}
         parts = content.get("parts") or []
