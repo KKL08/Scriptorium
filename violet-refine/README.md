@@ -120,7 +120,7 @@ Skill 可调用外部模型 API. 配置 key 是通过拉起本地页面快速配
 
 ### 工作间的 API 管线
 
-目前支持四个模型：**DeepSeek V4 Pro**（推荐）、**DeepSeek V4.1 Flash**、**Gemini 3.8 Flash**（推荐）和 **Gemini 4 Argon**。配置页面选好服务商后可以切换模型；也支持自定义 OpenAI 兼容接口——自填模型名和 Base URL，Ollama、vLLM 这类本地或第三方端点都能接。
+目前支持四个模型：**DeepSeek V4 Pro**（推荐）、**DeepSeek V4.1 Flash**、**Gemini 3.8 Flash** 和 **Gemini 4 Argon**（推荐）。配置页面选好服务商后可以切换模型；也支持自定义 OpenAI 兼容接口——自填模型名和 Base URL，Ollama、vLLM 这类本地或第三方端点都能接。
 
 推荐用不同源的模型做 review。Violet-Refine 默认用 DeepSeek review Claude 或 GPT 的产出——不同训练语料体系下的模型能抓到对方觉得「似乎没问题」的写法。DeepSeek V4 Pro 参数量大、中文语料积累深，综合润色效果出色；V4.1 Flash 输出更快，适合高频快速润色；Gemini 3.8 Flash 世界知识广，中文写作能力不凡，适合深度润色；Gemini 4 Argon 是 Google 目前最强的模型，思考更深、单次响应更慢，且不对免费层开放，适合对质量要求最高的长文改写。Gemini 3.7 Flash 已退役，旧配置会自动改用 3.8 Flash。
 
