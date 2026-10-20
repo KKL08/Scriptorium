@@ -11,3 +11,14 @@ class LLMRequestError(RuntimeError):
         if status_code is not None:
             prefix += f" (HTTP {status_code})"
         super().__init__(f"{prefix}: {detail}")
+
+
+class LLMTruncatedError(LLMRequestError):
+    """模型输出达到长度上限被截断：请求本身成功（鉴权通过），但正文不完整，不能当结果用。"""
+
+    def __init__(self, provider: str) -> None:
+        super().__init__(
+            provider,
+            None,
+            "输出达到长度上限被截断（思考过程也占用输出额度），结果不完整已丢弃。可以缩短输入后重试。",
+        )

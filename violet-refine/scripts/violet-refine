@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 # 向上找 pyproject.toml 定位项目根：开发仓（scripts 上三层）和发布扁平布局（上一层）都适用
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# 经 ~/.local/bin 等软链调用时先解析到真实脚本位置；逐级 readlink，不依赖老版 macOS 不支持的 readlink -f
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+  DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  case "$SOURCE" in /*) ;; *) SOURCE="$DIR/$SOURCE" ;; esac
+done
+ROOT="$(cd "$(dirname "$SOURCE")" && pwd)"
 while [ ! -f "$ROOT/pyproject.toml" ] && [ "$ROOT" != "/" ]; do
   ROOT="$(dirname "$ROOT")"
 done

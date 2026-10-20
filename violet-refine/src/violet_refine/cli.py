@@ -24,6 +24,8 @@ def build_request_options(provider: str, model: str, mode: str) -> dict[str, obj
     opts: dict[str, object] = {}
     if spec.max_output_tokens is not None:
         opts["max_tokens"] = spec.max_output_tokens
+    if spec.timeout_s is not None:
+        opts["timeout"] = spec.timeout_s
     if spec.thinking:
         opts["thinking"] = {"type": "enabled"}
     effort = spec.effort_by_mode.get(mode, spec.default_effort)
@@ -51,6 +53,10 @@ def _cmd_run(args: argparse.Namespace) -> int:
 
     client = HttpLLMClient()
     model = args.model or config.model
+    # 退役旧串按别名改发现行模型：旧串在厂商关停后会 404，不依赖服务端转发
+    spec = model_spec_for(config.provider, model)
+    if spec is not None:
+        model = spec.id
     review_context = ""
     if args.review_context is not None:
         review_context = args.review_context.read_text(encoding="utf-8")
