@@ -10,14 +10,10 @@ STRONG_RULES_HEADING = "## 第一层：强规则"
 
 
 def references_dir() -> Path:
-    # 依次匹配：开发仓布局、发布扁平布局（合集仓 skill 文件夹）、pip 安装的包内副本
-    project_root = Path(__file__).resolve().parents[2]
-    for candidate in (
-        project_root / "skill/violet-refine/references",
-        project_root / "references",
-    ):
-        if candidate.is_dir():
-            return candidate
+    # 依次匹配：skill 文件夹内的 references、pip 安装的包内副本
+    candidate = Path(__file__).resolve().parents[2] / "references"
+    if candidate.is_dir():
+        return candidate
     return Path(__file__).resolve().parent / "_references"
 
 

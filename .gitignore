@@ -11,3 +11,16 @@ AGENTS.md
 .DS_Store
 .idea/
 .vscode/
+
+# 测试缓存
+.pytest_cache/
+.ruff_cache/
+
+# 内部文档与评测产物（只留本地，不进远程）
+ARCHITECTURE.md
+PRODUCT.md
+DESIGN.md
+spec-*.md
+design-handoff/
+eval/
+docs/superpowers/
