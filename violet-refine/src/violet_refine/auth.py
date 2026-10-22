@@ -63,12 +63,13 @@ PROVIDERS: dict[str, Provider] = {
         key_url="https://aistudio.google.com/",
         models=(
             ModelSpec(id="gemini/gemini-3.8-flash", label="Gemini 3.8 Flash", default_effort="medium"),
-            # Gemini 4 非流式单次输出上限 32K 且思考 token 计入；官方建议单次超时至少 20 分钟
+            # Gemini 4：maxOutputTokens 是跨续写跳的总预算（思考 token 计入），非流式单跳 32K，
+            # 客户端遇 CONTINUATION 自动续写；官方建议单跳超时至少 20 分钟
             ModelSpec(
                 id="gemini/gemini-4-argon",
                 label="Gemini 4 Argon",
                 default_effort="medium",
-                max_output_tokens=32_768,
+                max_output_tokens=131_072,
                 timeout_s=1200,
             ),
         ),

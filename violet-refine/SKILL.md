@@ -87,6 +87,8 @@ skill/violet-refine/scripts/violet-refine run --workflow direct --mode refine \
 
 用户直接选 direct（跳过 review）时不传 `--review-context`，CLI 会自动让模型先内部审阅再改写，审阅过程不会出现在输出里。
 
+**耗时**：CLI 等模型返回完整结果才输出，中途没有进度提示。用 Gemini 4 Argon 处理长文时，单次请求就可能要几分钟；输出超过 32K token 时还会自动续写多轮，总耗时可能超过十分钟。这种情况下把命令放到后台运行，或者把工具调用的超时调到足够长，等它结束再取结果，不要因为暂时没有输出就中断重跑。
+
 **host 模型路径**：读 `references/prompts/` 下对应模板（`review.md` 或 `direct.md`），用 `references/prompts/modes.md` 中对应 mode 的段落替换 `[[MODE_RULES]]`，用规则包「写作全局规则」整段替换 `[[GLOBAL_RULES]]`，用「第一层：强规则」整段替换 `[[STRONG_RULES]]`（proofread 填「无」），再填入 `[[MODE]]`、`[[BRIEF]]`、`[[RULE_CONTEXT]]`。direct 模板的 `[[REVIEW_CONTEXT]]`：有 review 结果时填入审阅报告 + "按报告建议改写"；无 review 时填入"先内部审阅再改写，只输出改写结果"。按模板要求自己执行或交给 subagent。长文、多文件用 subagent，只传目标文本、mode、brief、规则行，不传聊天历史。
 
 ### 3. 交付
