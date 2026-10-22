@@ -6,7 +6,7 @@ import httpx
 
 from violet_refine.auth import ensure_api_key_usable
 from violet_refine.llm.adapters import ADAPTERS
-from violet_refine.llm.errors import LLMRequestError, LLMTruncatedError
+from violet_refine.llm.errors import LLMIncompleteError, LLMRequestError, LLMTruncatedError
 
 # 续写次数上限（首跳之外）：Gemini 非流式单跳 32K，8 次续写可覆盖 9 × 32K 的总预算；
 # 服务端若一直返回 CONTINUATION，到此为止按截断报错，不无限续。timeout 按跳计，最坏耗时 = 跳数 × timeout
@@ -98,9 +98,9 @@ class HttpLLMClient:
                 reply = adapter.parse(resp.json())
                 pieces.append(reply.text)
                 if reply.continuation is None:
-                    # 续写过之后只认正常结束：否则拼好的前文缺了后半，按截断处理；单跳行为不变
-                    if hop > 0 and not reply.is_complete:
-                        error = LLMTruncatedError(provider)
+                    # 只认正常结束：续写过之后拼好的前文缺了后半，按截断处理；单跳是被拦截或中断
+                    if not reply.is_complete:
+                        error = LLMTruncatedError(provider) if hop > 0 else LLMIncompleteError(provider)
                         break
                     return "".join(pieces)
                 hop_body = {**body, **reply.continuation}

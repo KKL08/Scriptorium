@@ -9,7 +9,7 @@ import httpx
 import pytest
 
 from violet_refine.llm import HttpLLMClient
-from violet_refine.llm.errors import LLMRequestError
+from violet_refine.llm.errors import LLMIncompleteError, LLMRequestError, LLMTruncatedError
 
 
 class FakeResponse:
@@ -98,6 +98,53 @@ def test_deepseek_parse_returns_empty_for_missing_content(wire):
     ) == ""
 
 
+def _openai_complete(wire, provider, choice):
+    wire["response"] = FakeResponse(payload={"choices": [choice]})
+    return HttpLLMClient().complete(
+        [{"role": "user", "content": "hi"}],
+        provider=provider,
+        model="deepseek/deepseek-v4-pro" if provider == "deepseek" else "m",
+        api_key="sk",
+        api_base=None if provider == "deepseek" else "http://localhost:11434/v1",
+    )
+
+
+@pytest.mark.parametrize("provider", ["deepseek", "openai-compatible"])
+def test_openai_length_finish_reason_raises_truncated(wire, provider):
+    # max_tokens 用尽：正文只有半截，不能当完整结果交出
+    choice = {"message": {"content": "半截正文"}, "finish_reason": "length"}
+    with pytest.raises(LLMTruncatedError) as excinfo:
+        _openai_complete(wire, provider, choice)
+    assert excinfo.value.provider == provider
+    assert "半截正文" not in str(excinfo.value)
+
+
+@pytest.mark.parametrize("finish_reason", ["content_filter", "insufficient_system_resource", "aborted"])
+def test_openai_aborted_finish_reason_raises_incomplete(wire, finish_reason):
+    # DeepSeek 官方枚举里的非正常结束：被过滤或生成被打断，正文为空或半截
+    choice = {"message": {"content": "半截正文"}, "finish_reason": finish_reason}
+    with pytest.raises(LLMIncompleteError) as excinfo:
+        _openai_complete(wire, "deepseek", choice)
+    assert excinfo.value.provider == "deepseek"
+    message = str(excinfo.value)
+    assert "半截正文" not in message
+    assert finish_reason not in message
+
+
+@pytest.mark.parametrize(
+    "choice",
+    [
+        {"message": {"content": "正文"}},
+        {"message": {"content": "正文"}, "finish_reason": None},
+        {"message": {"content": "正文"}, "finish_reason": "eos"},
+    ],
+    ids=["missing", "null", "unknown"],
+)
+def test_openai_missing_or_unknown_finish_reason_passes(wire, choice):
+    # 自定义端点（Ollama/vLLM 等）取值不统一：只拦已知的非正常值，其余放行
+    assert _openai_complete(wire, "openai-compatible", choice) == "正文"
+
+
 def test_openai_compatible_without_base_reports_clear_error(wire):
     with pytest.raises(LLMRequestError, match="Base URL"):
         HttpLLMClient().complete(
@@ -129,7 +176,7 @@ def test_openai_compatible_posts_minimal_body_to_user_base(wire):
 
 def test_gemini_request_maps_roles_and_thinking(wire):
     wire["response"] = FakeResponse(
-        payload={"candidates": [{"content": {"parts": [{"text": "好"}]}}]}
+        payload={"candidates": [{"content": {"parts": [{"text": "好"}]}, "finishReason": "STOP"}]}
     )
     client = HttpLLMClient()
     result = client.complete(
@@ -167,7 +214,7 @@ def test_gemini_request_maps_roles_and_thinking(wire):
 
 
 def test_gemini_custom_base_keeps_version_segment(wire):
-    wire["response"] = FakeResponse(payload={"candidates": []})
+    wire["response"] = FakeResponse(payload={"candidates": [{"finishReason": "STOP"}]})
     client = HttpLLMClient()
     client.complete(
         [{"role": "user", "content": "hi"}],
@@ -190,24 +237,46 @@ def test_gemini_parse_skips_thought_parts(wire):
     payload = {"candidates": [{"content": {"parts": [
         {"text": "思考中…", "thought": True},
         {"text": "正文"},
-    ]}}]}
+    ]}, "finishReason": "STOP"}]}
     assert _gemini_complete(wire, payload) == "正文"
 
 
 def test_gemini_parse_all_thought_returns_empty(wire):
-    payload = {"candidates": [{"content": {"parts": [{"text": "只有思考", "thought": True}]}}]}
+    payload = {"candidates": [{"content": {"parts": [{"text": "只有思考", "thought": True}]}, "finishReason": "STOP"}]}
     assert _gemini_complete(wire, payload) == ""
 
 
-def test_gemini_parse_missing_candidates_returns_empty(wire):
-    assert _gemini_complete(wire, {}) == ""
-    assert _gemini_complete(wire, {"candidates": []}) == ""
+def test_gemini_parse_stop_without_content_or_parts_returns_empty(wire):
+    # STOP 正常结束但 candidate 无 content/parts：合法但空，不抛 KeyError
+    assert _gemini_complete(wire, {"candidates": [{"finishReason": "STOP"}]}) == ""
+    assert _gemini_complete(wire, {"candidates": [{"content": {}, "finishReason": "STOP"}]}) == ""
 
 
-def test_gemini_parse_missing_content_or_parts_returns_empty(wire):
-    # finishReason 等原因导致 candidate 无 content：合法但空，不抛 KeyError
-    assert _gemini_complete(wire, {"candidates": [{"finishReason": "SAFETY"}]}) == ""
-    assert _gemini_complete(wire, {"candidates": [{"content": {}}]}) == ""
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"candidates": [{"content": {"parts": [{"text": "半截正文"}]}, "finishReason": "SAFETY"}]},
+        {"candidates": [{"content": {"parts": [{"text": "半截正文"}]}, "finishReason": "RECITATION"}]},
+        {"candidates": [{"content": {"parts": [{"text": "半截正文"}]}, "finishReason": "OTHER"}]},
+        {"candidates": [{"finishReason": "PROHIBITED_CONTENT"}]},
+        {"candidates": [{"content": {"parts": [{"text": "半截正文"}]}}]},
+        {"candidates": [], "promptFeedback": {"blockReason": "SAFETY"}},
+        {},
+    ],
+    ids=["safety", "recitation", "other", "prohibited-no-content", "no-finish-reason", "prompt-blocked", "empty"],
+)
+def test_gemini_single_hop_non_stop_raises_incomplete(wire, payload):
+    # 单跳只认 STOP 为正常结束：被拦截或中断时正文为空或半截，不能当结果交出
+    with pytest.raises(LLMIncompleteError) as excinfo:
+        _gemini_complete(wire, payload)
+    assert len(wire["calls"]) == 1
+    message = str(excinfo.value)
+    # 受控文案：不回显正文，也不回显厂商枚举值
+    assert "半截正文" not in message
+    for enum_value in ("SAFETY", "RECITATION", "OTHER", "PROHIBITED_CONTENT"):
+        assert enum_value not in message
+    assert isinstance(excinfo.value, LLMRequestError)
+    assert not isinstance(excinfo.value, LLMTruncatedError)
 
 
 def test_unknown_provider_raises_clear_error(wire):

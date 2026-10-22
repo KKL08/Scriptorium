@@ -10,7 +10,7 @@ from violet_refine.llm.errors import LLMRequestError, LLMTruncatedError
 class Reply:
     """一跳响应的解析结果。continuation 非 None 表示正文未完：合入原请求体顶层再发一跳。
 
-    is_complete 表示这一跳是否正常结束（Gemini 仅 STOP）；续写过之后非正常结束，前文即不完整。
+    is_complete 表示这一跳是否正常结束（Gemini 仅 STOP）；非正常结束时正文为空或半截，不能当结果交出。
     """
 
     text: str
@@ -36,6 +36,10 @@ class Adapter(Protocol):
     def parse(self, data: dict[str, Any]) -> Reply: ...
 
 
+# DeepSeek 官方枚举中的非正常结束：正文被过滤或生成被打断。自定义端点取值不统一，只拦这几个已知值
+_OPENAI_ABORTED_FINISH_REASONS = frozenset({"content_filter", "insufficient_system_resource", "aborted"})
+
+
 class OpenAICompatibleAdapter:
     """标准 OpenAI Chat Completions 形态（DeepSeek 与自定义兼容端点共用）。
 
@@ -43,7 +47,8 @@ class OpenAICompatibleAdapter:
     Ollama/vLLM 等自定义端点的 base 通常已含所需路径）。
     """
 
-    def __init__(self, *, default_base: str | None, strip_prefix: str | None) -> None:
+    def __init__(self, *, provider: str, default_base: str | None, strip_prefix: str | None) -> None:
+        self.provider = provider
         self.default_base = default_base
         self.strip_prefix = strip_prefix
 
@@ -81,8 +86,12 @@ class OpenAICompatibleAdapter:
         choices = data.get("choices") or []
         if not choices:
             return Reply("")
+        finish_reason = choices[0].get("finish_reason")
+        # length：max_tokens 用尽，正文只有半截；文案受控，不回显正文
+        if finish_reason == "length":
+            raise LLMTruncatedError(self.provider)
         message = choices[0].get("message") or {}
-        return Reply(message.get("content") or "")
+        return Reply(message.get("content") or "", is_complete=finish_reason not in _OPENAI_ABORTED_FINISH_REASONS)
 
 
 class GeminiAdapter:
@@ -156,9 +165,9 @@ class GeminiAdapter:
 
 ADAPTERS: dict[str, Adapter] = {
     "deepseek": OpenAICompatibleAdapter(
-        default_base="https://api.deepseek.com", strip_prefix="deepseek/"
+        provider="deepseek", default_base="https://api.deepseek.com", strip_prefix="deepseek/"
     ),
-    "openai-compatible": OpenAICompatibleAdapter(default_base=None, strip_prefix=None),
+    "openai-compatible": OpenAICompatibleAdapter(provider="openai-compatible", default_base=None, strip_prefix=None),
     "google": GeminiAdapter(
         default_base="https://generativelanguage.googleapis.com", strip_prefix="gemini/"
     ),
