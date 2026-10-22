@@ -1,12 +1,21 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, Protocol
 
 from violet_refine.llm.errors import LLMRequestError, LLMTruncatedError
 
-# MAX_TOKENS：maxOutputTokens 总预算（思考 + 正文）用尽；CONTINUATION：单次请求到上限、预算未尽
-# （非流式 32K），需带 continuationToken 续写。两者都意味着正文不完整（long-decode 指南）
-GEMINI_TRUNCATED_FINISH_REASONS = frozenset({"MAX_TOKENS", "CONTINUATION"})
+
+@dataclass(frozen=True)
+class Reply:
+    """一跳响应的解析结果。continuation 非 None 表示正文未完：合入原请求体顶层再发一跳。
+
+    is_complete 表示这一跳是否正常结束（Gemini 仅 STOP）；续写过之后非正常结束，前文即不完整。
+    """
+
+    text: str
+    continuation: dict[str, Any] | None = None
+    is_complete: bool = True
 
 
 class Adapter(Protocol):
@@ -24,7 +33,7 @@ class Adapter(Protocol):
         reasoning_effort: str | None,
     ) -> tuple[str, dict[str, str], dict[str, Any]]: ...
 
-    def parse(self, data: dict[str, Any]) -> str: ...
+    def parse(self, data: dict[str, Any]) -> Reply: ...
 
 
 class OpenAICompatibleAdapter:
@@ -68,12 +77,12 @@ class OpenAICompatibleAdapter:
             body["reasoning_effort"] = reasoning_effort
         return url, headers, body
 
-    def parse(self, data: dict[str, Any]) -> str:
+    def parse(self, data: dict[str, Any]) -> Reply:
         choices = data.get("choices") or []
         if not choices:
-            return ""
+            return Reply("")
         message = choices[0].get("message") or {}
-        return message.get("content") or ""
+        return Reply(message.get("content") or "")
 
 
 class GeminiAdapter:
@@ -123,17 +132,26 @@ class GeminiAdapter:
         body["generationConfig"] = generation_config
         return url, headers, body
 
-    def parse(self, data: dict[str, Any]) -> str:
+    def parse(self, data: dict[str, Any]) -> Reply:
         candidates = data.get("candidates") or []
         if not candidates:
-            return ""
+            return Reply("", is_complete=False)
+        candidate = candidates[0]
+        finish_reason = candidate.get("finishReason")
+        token = candidate.get("continuationToken")
+        # MAX_TOKENS：maxOutputTokens 总预算（思考 + 正文，跨所有续写跳）用尽，同预算续写会 400。
         # 截断时绝不把半截正文当完整结果交出；文案受控，不回显正文或续写 token
-        if candidates[0].get("finishReason") in GEMINI_TRUNCATED_FINISH_REASONS:
+        if finish_reason == "MAX_TOKENS" or (finish_reason == "CONTINUATION" and not token):
             raise LLMTruncatedError("google")
         # 全程防御式 .get()：candidate 缺 content/parts 视作空正文，不 KeyError
-        content = candidates[0].get("content") or {}
+        content = candidate.get("content") or {}
         parts = content.get("parts") or []
-        return "".join(part.get("text", "") for part in parts if part.get("thought") is not True)
+        # 每跳 parts 是增量（实测），只取非思考正文；整跳都在思考时正文为空
+        text = "".join(part.get("text", "") for part in parts if part.get("thought") is not True)
+        # CONTINUATION：单跳到上限（非流式 32K）、预算未尽——原请求顶层加 token 续写
+        if finish_reason == "CONTINUATION":
+            return Reply(text, {"continuationToken": token}, is_complete=False)
+        return Reply(text, is_complete=finish_reason == "STOP")
 
 
 ADAPTERS: dict[str, Adapter] = {

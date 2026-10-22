@@ -6,7 +6,11 @@ import httpx
 
 from violet_refine.auth import ensure_api_key_usable
 from violet_refine.llm.adapters import ADAPTERS
-from violet_refine.llm.errors import LLMRequestError
+from violet_refine.llm.errors import LLMRequestError, LLMTruncatedError
+
+# 续写次数上限（首跳之外）：Gemini 非流式单跳 32K，8 次续写可覆盖 9 × 32K 的总预算；
+# 服务端若一直返回 CONTINUATION，到此为止按截断报错，不无限续。timeout 按跳计，最坏耗时 = 跳数 × timeout
+MAX_CONTINUATIONS = 8
 
 
 def _status_message(status: int) -> str:
@@ -83,11 +87,25 @@ class HttpLLMClient:
                 thinking=thinking,
                 reasoning_effort=reasoning_effort,
             )
-            resp = httpx.post(url, headers=headers, json=body, timeout=timeout)
-            if not 200 <= resp.status_code < 300:
-                error = LLMRequestError(provider, resp.status_code, _status_message(resp.status_code))
+            # long-decode：每跳原样重发同一请求，只在顶层合入上一跳给的续写字段；各跳正文是增量，按序拼接
+            pieces: list[str] = []
+            hop_body = body
+            for hop in range(MAX_CONTINUATIONS + 1):
+                resp = httpx.post(url, headers=headers, json=hop_body, timeout=timeout)
+                if not 200 <= resp.status_code < 300:
+                    error = LLMRequestError(provider, resp.status_code, _status_message(resp.status_code))
+                    break
+                reply = adapter.parse(resp.json())
+                pieces.append(reply.text)
+                if reply.continuation is None:
+                    # 续写过之后只认正常结束：否则拼好的前文缺了后半，按截断处理；单跳行为不变
+                    if hop > 0 and not reply.is_complete:
+                        error = LLMTruncatedError(provider)
+                        break
+                    return "".join(pieces)
+                hop_body = {**body, **reply.continuation}
             else:
-                return adapter.parse(resp.json())
+                error = LLMTruncatedError(provider)
         except LLMRequestError as known:
             error = known
         except Exception:  # noqa: BLE001 - 不透传原始异常，避免其 repr/traceback/__context__ 带出 key
