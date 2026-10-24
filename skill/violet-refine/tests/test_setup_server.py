@@ -534,3 +534,54 @@ def test_post_test_google_probe_ok_when_truncated(tmp_path, monkeypatch):
         server.server_close()
     assert status == 200
     assert json.loads(body)["ok"] is True
+
+
+def _probe_with_http_client(tmp_path, monkeypatch, provider, payload):
+    # 走真实 HttpLLMClient，只在 httpx.post（系统边界）回放给定响应
+    import httpx
+
+    from violet_refine.llm import HttpLLMClient
+
+    class _Resp:
+        status_code = 200
+
+        def json(self):
+            return payload
+
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: _Resp())
+    server, url, _ = create_setup_server(
+        store=InMemoryKeyStore(), llm_client=HttpLLMClient(),
+        config_path=tmp_path / "config.toml", token="t",
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        status, body = _post(
+            url + "test",
+            {"provider": provider, "api_key": "k", "model": "", "api_base": ""},
+        )
+    finally:
+        server.shutdown()
+        server.server_close()
+    assert status == 200
+    return json.loads(body)
+
+
+def test_post_test_google_probe_fails_on_safety(tmp_path, monkeypatch):
+    # /test 只豁免截断：被内容审核拦下不能报「key 可用」，错误文案也不回显枚举值
+    result = _probe_with_http_client(
+        tmp_path, monkeypatch, "google",
+        {"candidates": [{"content": {"parts": [{"text": "半截"}]}, "finishReason": "SAFETY"}]},
+    )
+    assert result["ok"] is False
+    assert "SAFETY" not in result["error"]
+    assert "半截" not in result["error"]
+
+
+def test_post_test_deepseek_probe_ok_when_length(tmp_path, monkeypatch):
+    # 16 token 探测下 finish_reason=length 是预期结果：截断说明鉴权已通过
+    result = _probe_with_http_client(
+        tmp_path, monkeypatch, "deepseek",
+        {"choices": [{"message": {"content": ""}, "finish_reason": "length"}]},
+    )
+    assert result["ok"] is True

@@ -22,3 +22,14 @@ class LLMTruncatedError(LLMRequestError):
             None,
             "输出达到长度上限被截断（思考过程也占用输出额度），结果不完整已丢弃。可以缩短输入后重试。",
         )
+
+
+class LLMIncompleteError(LLMRequestError):
+    """模型没有正常结束（内容审核拦截、服务端中断等）：请求本身成功，但正文可能为空或半截，不能当结果用。"""
+
+    def __init__(self, provider: str) -> None:
+        super().__init__(
+            provider,
+            None,
+            "模型没有正常完成输出（可能触发了内容审核，或服务端中断），结果不完整已丢弃。可以稍后重试，或调整内容后再试。",
+        )
